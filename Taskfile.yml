@@ -1,0 +1,119 @@
+version: "3"
+
+vars:
+  PNPM: pnpm
+
+tasks:
+  default:
+    desc: Start development server (turbo dev)
+    cmds:
+      - task: dev
+
+  dev:
+    desc: Run monorepo dev (turbo dev)
+    cmds:
+      - "{{.PNPM}} dev"
+
+  build:
+    desc: Build all apps/packages (turbo build)
+    cmds:
+      - "{{.PNPM}} build"
+
+  lint:
+    desc: Lint all apps/packages (turbo lint)
+    cmds:
+      - "{{.PNPM}} lint"
+
+  format:
+    desc: Format code via turbo
+    cmds:
+      - "{{.PNPM}} format"
+
+  typecheck:
+    desc: Type-check all projects (turbo typecheck)
+    cmds:
+      - "{{.PNPM}} typecheck"
+
+  web:dev:
+    desc: Run web app dev server (vite)
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} dev"
+
+  web:build:
+    desc: Build web app (vite build)
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} build"
+
+  web:preview:
+    desc: Preview built web app (vite preview)
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} preview"
+
+  web:lint:
+    desc: Lint web app
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} lint"
+
+  web:format:
+    desc: Format web app sources with Prettier
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} format"
+
+  web:typecheck:
+    desc: Type-check web app
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} typecheck"
+
+  web:deno:clean:
+    desc: Clean Deno/Nitro build artifacts for web
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} deno:clean"
+
+  web:deno:prepare:
+    desc: Prepare Nitro output for Deno binaries
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} deno:prepare"
+
+  web:deno:build:linux:x64:
+    desc: Build Deno binary for Linux x64
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:linux:x64"
+
+  web:deno:build:linux:arm64:
+    desc: Build Deno binary for Linux arm64
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:linux:arm64"
+
+  web:deno:build:darwin:x64:
+    desc: Build Deno binary for macOS x64
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:darwin:x64"
+
+  web:deno:build:darwin:arm64:
+    desc: Build Deno binary for macOS arm64
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:darwin:arm64"
+
+  web:deno:build:windows:x64:
+    desc: Build Deno binary for Windows x64
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:windows:x64"
+
+  web:deno:build:all:
+    desc: Build all Deno binaries (all platforms)
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} run build:deno:all"
