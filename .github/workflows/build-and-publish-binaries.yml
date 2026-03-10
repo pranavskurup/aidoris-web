@@ -5,16 +5,16 @@ on:
     tags:
       - "v*.*.*"
 
+env:
+  APP_PATH: apps/web
+  TAG_NAME: ${{ github.ref_name }}
+
 jobs:
-  build-and-publish:
+  build-linux-darwin:
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
-
-    env:
-      APP_PATH: apps/web
-      TAG_NAME: ${{ github.ref_name }}
 
     steps:
       - name: Checkout repository
@@ -36,18 +36,105 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Deno binaries
+      - name: Build Deno binaries (Linux + macOS)
         working-directory: ${{ env.APP_PATH }}
-        run: pnpm run build:deno:all
+        run: |
+          pnpm run build          # builds .output
+          pnpm run deno:prepare   # cleans + regenerates .output
+          pnpm run build:deno:linux:x64
+          pnpm run build:deno:linux:arm64
+          pnpm run build:deno:darwin:x64
+          pnpm run build:deno:darwin:arm64
 
-      - name: Rename binaries with tag
+      - name: Rename binaries with tag (Linux + macOS)
         working-directory: ${{ env.APP_PATH }}/dist
         run: |
           mv aidoris-web-linux-x64 aidoris-web-linux-x64-${TAG_NAME}
           mv aidoris-web-linux-arm64 aidoris-web-linux-arm64-${TAG_NAME}
           mv aidoris-web-darwin-x64 aidoris-web-darwin-x64-${TAG_NAME}
           mv aidoris-web-darwin-arm64 aidoris-web-darwin-arm64-${TAG_NAME}
+
+      - name: Upload linux/darwin binaries as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-binaries-unix-${{ github.ref_name }}
+          path: |
+            ${{ env.APP_PATH }}/dist/**
+
+  build-windows:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable corepack and pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows Deno binary
+        working-directory: ${{ env.APP_PATH }}
+        run: |
+          pnpm run build
+          pnpm run deno:prepare
+          pnpm run build:deno:windows:x64
+
+      - name: Rename Windows binary with tag
+        working-directory: ${{ env.APP_PATH }}/dist
+        shell: bash
+        run: |
           mv aidoris-web-windows-x64.exe aidoris-web-windows-x64-${TAG_NAME}.exe
+
+      - name: Upload windows binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-binaries-windows-${{ github.ref_name }}
+          path: |
+            ${{ env.APP_PATH }}/dist/**
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - build-linux-darwin
+      - build-windows
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Download build artifacts (linux/darwin)
+        uses: actions/download-artifact@v4
+        with:
+          name: web-binaries-unix-${{ github.ref_name }}
+          path: dist-unix
+
+      - name: Download build artifacts (windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: web-binaries-windows-${{ github.ref_name }}
+          path: dist-windows
 
       - name: Generate changelog
         run: |
@@ -67,15 +154,7 @@ jobs:
           echo "" >> CHANGELOG.md
           git log $RANGE --pretty=format:'- %s (%h)' >> CHANGELOG.md
 
-      - name: Upload binaries as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-binaries-${{ github.ref_name }}
-          path: |
-            ${{ env.APP_PATH }}/dist/**
-
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -84,7 +163,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ${{ env.APP_PATH }}/dist/**
+            dist-unix/**
+            dist-windows/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
