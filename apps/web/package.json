@@ -11,14 +11,13 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "deno:clean": "rimraf .output .tanstack .turbo dist",
+    "deno:prepare": "npm-run-all -s deno:clean build",
     "build:deno:linux:x64": "deno compile --allow-net --allow-read --allow-env --include .output --target x86_64-unknown-linux-gnu --output dist/aidoris-web-linux-x64 .output/server/index.mjs",
     "build:deno:linux:arm64": "deno compile --allow-net --allow-read --allow-env --include .output --target aarch64-unknown-linux-gnu --output dist/aidoris-web-linux-arm64 .output/server/index.mjs",
     "build:deno:darwin:x64": "deno compile --allow-net --allow-read --allow-env --include .output --target x86_64-apple-darwin --output dist/aidoris-web-darwin-x64 .output/server/index.mjs",
     "build:deno:darwin:arm64": "deno compile --allow-net --allow-read --allow-env --include .output --target aarch64-apple-darwin --output dist/aidoris-web-darwin-arm64 .output/server/index.mjs",
     "build:deno:windows:x64": "deno compile --allow-net --allow-read --allow-env --include .output --target x86_64-pc-windows-msvc --output dist/aidoris-web-windows-x64.exe .output/server/index.mjs",
-    "build:deno:all": "npm-run-all -s build deno:prepare build:deno:linux:x64 build:deno:linux:arm64 build:deno:darwin:x64 build:deno:darwin:arm64 build:deno:windows:x64",
-    "deno:prepare": "npm-run-all -s deno:clean deno:prepare:run",
-    "deno:prepare:run": "node -e \"require('fs').mkdirSync('.output',{recursive:true})\" && vite build"
+    "build:deno:all": "npm-run-all -s deno:prepare build:deno:linux:x64 build:deno:linux:arm64 build:deno:darwin:x64 build:deno:darwin:arm64 build:deno:windows:x64"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.0.0",
