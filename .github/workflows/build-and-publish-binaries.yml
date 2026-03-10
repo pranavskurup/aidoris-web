@@ -14,16 +14,19 @@ jobs:
 
     env:
       APP_PATH: apps/web
+      TAG_NAME: ${{ github.ref_name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "pnpm"
 
       - name: Enable corepack and pnpm
         run: |
@@ -36,6 +39,33 @@ jobs:
       - name: Build Deno binaries
         working-directory: ${{ env.APP_PATH }}
         run: pnpm run build:deno:all
+
+      - name: Rename binaries with tag
+        working-directory: ${{ env.APP_PATH }}/dist
+        run: |
+          mv aidoris-web-linux-x64 aidoris-web-linux-x64-${TAG_NAME}
+          mv aidoris-web-linux-arm64 aidoris-web-linux-arm64-${TAG_NAME}
+          mv aidoris-web-darwin-x64 aidoris-web-darwin-x64-${TAG_NAME}
+          mv aidoris-web-darwin-arm64 aidoris-web-darwin-arm64-${TAG_NAME}
+          mv aidoris-web-windows-x64.exe aidoris-web-windows-x64-${TAG_NAME}.exe
+
+      - name: Generate changelog
+        run: |
+          CURRENT_TAG="${TAG_NAME}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${CURRENT_TAG}^" 2>/dev/null || true)"
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${CURRENT_TAG}"
+            echo "Generating changelog from ${PREV_TAG} to ${CURRENT_TAG}"
+          else
+            FIRST_COMMIT="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+            RANGE="${FIRST_COMMIT}..${CURRENT_TAG}"
+            echo "No previous tag found, generating changelog from first commit (${FIRST_COMMIT}) to ${CURRENT_TAG}"
+          fi
+
+          echo "# Changelog for ${CURRENT_TAG}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          git log $RANGE --pretty=format:'- %s (%h)' >> CHANGELOG.md
 
       - name: Upload binaries as artifacts
         uses: actions/upload-artifact@v4
@@ -50,6 +80,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Web binaries ${{ github.ref_name }}
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
           files: |
